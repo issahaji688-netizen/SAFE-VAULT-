@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe Vault - Hifadhi Vitu Vyako Muhimu</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial;background:#f0f4ff;margin:0;padding:15px}
+.card{background:white;padding:18px;border-radius:15px;margin-bottom:12px;box-shadow:0 2px 8px #ddd}
+input{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #ccc;font-size:16px}
+button{width:100%;padding:12px;background:#1a56db;color:white;border:none;border-radius:10px;font-size:16px;margin-top:6px;cursor:pointer}
+button.green{background:#16a34a}
+button.red{background:#dc2626}
+button.gray{background:#64748b}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.box{background:#dbeafe;padding:18px;border-radius:12px;text-align:center}
+.box b{font-size:22px}
+.hidden{display:none}
+.small{font-size:12px;color:gray}
+.top{display:flex;justify-content:space-between;align-items:center}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="card">
+<h2 style="text-align:center">🔒 Safe Vault</h2>
+<p style="text-align:center">Secure your data privately</p>
+<input id="email" type="email" placeholder="Email: you@email.com">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="doSignup()">Create Account</button>
+<button onclick="doLogin()" class="green">Log In</button>
+<p class="small">Mpya? Weka email + password kisha bonyeza Create Account kwanza, ndio bonyeza Log In.</p>
+<p class="small" onclick="alert('Phone Recovery: Tutakutumia code kwenye namba yako')">Forget Password? Phone recovery</p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashPage" class="hidden">
+<div class="top">
+<h2>Safe Vault ☰</h2>
+<button onclick="doLogout()" class="red" style="width:auto;padding:8px 12px">Log Out</button>
+</div>
+<p id="welcome"></p>
+
+<div class="grid">
+<div class="box">📸<br>Photo<br><b id="cPhoto">0</b></div>
+<div class="box">🎙️<br>Voice<br><b id="cVoice">0</b></div>
+<div class="box">📞<br>Contact<br><b id="cContact">0</b></div>
+<div class="box">📄<br>Document<br><b id="cDoc">0</b></div>
+</div>
+
+<div class="card">
+<h3>Menu</h3>
+<p>Saved -> All: Photo, Voice, Document, Contact</p>
+<p>Themes: <button onclick="toggleTheme()" class="gray" style="width:auto">Light / Dark</button></p>
+<p>Setting -> Privacy Policy | Security | Change PIN</p>
+<p>About -> User Info | Log Out | Delete Account</p>
+</div>
+
+<div class="card">
+<h3>Upload - Hifadhi Kitu Kipya</h3>
+<select id="cat" style="width:100%;padding:12px;border-radius:10px">
+<option value="Photo">Photo</option>
+<option value="Voice">Voice</option>
+<option value="Contact">Contact</option>
+<option value="Document">Document</option>
+</select>
+<input type="file" id="fileInput">
+<button onclick="doUpload()">Save to Vault</button>
+</div>
+
+<div id="list"></div>
+
+<div class="card">
+<h3>Privacy Policy</h3>
+<p class="small">Data yako ni yako tu. Hatuuzi, hatuangalii. Ukifuta akaunti, vitu vyote vinafutika kabisa.</p>
+<button onclick="doDeleteAccount()" class="red">Delete My Account</button>
+</div>
+</div>
+
+<script>
+function getUsers(){ try{return JSON.parse(localStorage.getItem('sv_users')||'[]')}catch(e){return []} }
+function saveUsers(u){ localStorage.setItem('sv_users',JSON.stringify(u)) }
+function getFiles(){ try{return JSON.parse(localStorage.getItem('sv_files')||'[]')}catch(e){return []} }
+function saveFiles(f){ localStorage.setItem('sv_files',JSON.stringify(f)) }
+let currentUser = localStorage.getItem('sv_current')||'';
+
+function doSignup(){
+  let e=document.getElementById('email').value.trim();
+  let p=document.getElementById('pass').value.trim();
+  if(!e||!p){alert('Weka Email na Password kwanza');return}
+  let users=getUsers();
+  if(users.find(u=>u.email==e)){alert('Hii email tayari ina akaunti, bonyeza Log In');return}
+  users.push({email:e,pass:p});
+  saveUsers(users);
+  alert('Hongera! Account imeundwa. Sasa bonyeza Log In');
+}
+function doLogin(){
+  let e=document.getElementById('email').value.trim();
+  let p=document.getElementById('pass').value.trim();
+  if(!e||!p){alert('Weka Email na Password');return}
+  let found=getUsers().find(u=>u.email==e && u.pass==p);
+  if(!found){alert('Email au Password sio sahihi. Kama ni mpya, bonyeza Create Account kwanza');return}
+  currentUser=e;
+  localStorage.setItem('sv_current',e);
+  showDash();
+}
+function showDash(){
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('dashPage').classList.remove('hidden');
+  document.getElementById('welcome').innerText='Welcome back, '+currentUser+' - Your vault is secure';
+  render();
+}
+function doLogout(){ localStorage.removeItem('sv_current'); location.reload(); }
+function doUpload(){
+  let inp=document.getElementById('fileInput');
+  if(!inp.files[0]){alert('Chagua faili kwanza');return}
+  let f=inp.files[0];
+  let cat=document.getElementById('cat').value;
+  let reader=new FileReader();
+  reader.onload=function(){
+    let files=getFiles();
+    files.push({owner:currentUser,name:f.name,type:f.type,cat:cat,data:reader.result,date:new Date().toLocaleString()});
+    saveFiles(files);
+    render();
+    alert('Imehifadhiwa kwenye Vault!');
+  };
+  reader.readAsDataURL(f);
+}
+function render(){
+  let files=getFiles();
+  let my=files.filter(f=>f.owner==currentUser);
+  document.getElementById('cPhoto').innerText=my.filter(f=>f.cat=='Photo').length;
+  document.getElementById('cVoice').innerText=my.filter(f=>f.cat=='Voice').length;
+  document.getElementById('cContact').innerText=my.filter(f=>f.cat=='Contact').length;
+  document.getElementById('cDoc').innerText=my.filter(f=>f.cat=='Document').length;
+  let html='';
+  my.forEach(function(f){
+    let idx=files.indexOf(f);
+    html+='<div class="card"><b>'+f.name+'</b> - '+f.cat+'<br><small>'+f.date+'</small><br><button onclick="doDownload('+idx+')" class="green" style="width:auto">Download / Restore</button> <button onclick="doDelete('+idx+')" class="red" style="width:auto">Delete</button></div>';
+  });
+  document.getElementById('list').innerHTML=html;
+}
+function doDownload(i){
+  let f=getFiles()[i];
+  let a=document.createElement('a'); a.href=f.data; a.download=f.name; a.click();
+}
+function doDelete(i){
+  if(!confirm('Kufuta hii?')) return;
+  let files=getFiles(); files.splice(i,1); saveFiles(files); render();
+}
+function toggleTheme(){
+  if(document.body.style.background=='black'){document.body.style.background='#f0f4ff';document.body.style.color='black'}
+  else{document.body.style.background='black';document.body.style.color='white'}
+}
+function doDeleteAccount(){
+  if(!confirm('Kufuta akaunti yako kabisa?')) return;
+  saveUsers(getUsers().filter(u=>u.email!=currentUser));
+  saveFiles(getFiles().filter(f=>f.owner!=currentUser));
+  doLogout();
+}
+if(currentUser!=''){ showDash(); }
+</script>
+</body>
+                    </html>
